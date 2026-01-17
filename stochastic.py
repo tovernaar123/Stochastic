@@ -55,10 +55,38 @@ def StrongError(factorlist, X, f, g, dgdx, wmax, Scheme):
     tmax, schememax = Schemer(1, X, f, g, dgdx, wmax, Scheme)
     errorlist = []
     for factor in factorlist:
-        t, scheme = Schemer(factor, X0, itof, itog, itodgdx, w_max, MilsteinStep)
+        t, scheme = Schemer(factor, X, f, g, dgdx, wmax, Scheme)
         errorlist.append(np.average(np.abs(schememax[factor-1::factor, 1] - scheme[:, 1])))
         
     return np.array(errorlist)
+
+def WeakError(factorlist, X, f, g, dgdx, Scheme, trials):
+    wmax = rng.normal(0.0, sqrtdt_max, (trials, n))
+    schememax_avg = []
+    for i in range(trials):
+        tmax, schememax = Schemer(1, X, f, g, dgdx, wmax[i], Scheme)
+        schememax_avg.append(schememax)
+
+    schememax_avg = np.average(schememax_avg, 0)
+
+    errorlist = []
+    for factor in factorlist:
+        scheme_avg = []
+        for i in range(trials):
+            t, scheme = Schemer(factor, X, f, g, dgdx, wmax[i], Scheme)
+            scheme_avg.append(scheme)
+
+        scheme_avg = np.average(scheme_avg, 0)
+        errorlist.append(np.average(np.abs(schememax_avg[factor-1::factor, 1] - scheme_avg[:, 1])))
+            
+        
+    return np.array(errorlist)
+
+
+
+    
+
+
 
 #for i in range(1, 20):
 #    Schemer(i*5, X0, itof, itog, itodgdx, w_max, MilsteinStep)
@@ -67,6 +95,13 @@ factors = np.array(range(200, 2000))
 plt.figure()
 plt.plot(dt_max*factors, StrongError(factors, X0, itof, itog, itodgdx, w_max, EulerMaruyamaStep))
 plt.plot(dt_max*factors, StrongError(factors, X0, itof, itog, itodgdx, w_max, MilsteinStep))
+
+trials = 500
+plt.figure()
+plt.plot(dt_max*factors,  WeakError(factors, X0, itof, itog, itodgdx, EulerMaruyamaStep, trials))
+plt.plot(dt_max*factors,  WeakError(factors, X0, itof, itog, itodgdx, MilsteinStep, trials))
+
+
 
 
 
