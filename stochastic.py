@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 rng = np.random.default_rng()
-dt_max = .0001 
+dt_max = .0005 
 sqrtdt_max = np.sqrt(dt_max)
 T = 1.  # Total time.
 n = int(T / dt_max)  # Number of time steps.
@@ -38,24 +38,35 @@ def MilsteinStep(X, f, g, dgdx, t, dt, dWt):
     dval = np.matmul(dgdx(X, t), gvar)
     return X + f(X, t)*dt + gvar*dWt + 0.5*dval*(dWt*dWt - dt)
 
-def Schemer(dt, X, f, g, dgdx, wmax, Scheme, dtmax=dt_max):
-    factor = int(dt/dt_max)
+def Schemer(factor, X, f, g, dgdx, wmax, Scheme):
     w = wmax[::factor]
     dw = w[1:] - w[:-1]
-    t = np.arange(0, 1, dt)[1:]
+    t = np.arange(0, 1, dt_max*factor)[1:]
     xlist = []
 
     for i in range(len(t)):
-        xlist.append(Scheme(X, f, g, dgdx, t[i], dt, dw[i]))
+        xlist.append(Scheme(X, f, g, dgdx, t[i], dt_max*factor, dw[i]))
 
     xlist = np.array(xlist)
-    plt.plot(t, xlist[:, 1])
+    #plt.plot(t, xlist[:, 1])
     return t, xlist
 
+def StrongError(factorlist, X, f, g, dgdx, wmax, Scheme):
+    tmax, schememax = Schemer(1, X, f, g, dgdx, wmax, Scheme)
+    errorlist = []
+    for factor in factorlist:
+        t, scheme = Schemer(factor, X0, itof, itog, itodgdx, w_max, MilsteinStep)
+        errorlist.append(np.average(np.abs(schememax[factor-1::factor, 1] - scheme[:, 1])))
+        
+    return np.array(errorlist)
 
+#for i in range(1, 20):
+#    Schemer(i*5, X0, itof, itog, itodgdx, w_max, MilsteinStep)
 
-for i in range(1, 20):
-    Schemer(i*dt_max*5, X0, itof, itog, itodgdx, w_max, MilsteinStep)
+factors = np.array(range(200, 2000))
+plt.figure()
+plt.plot(dt_max*factors, StrongError(factors, X0, itof, itog, itodgdx, w_max, EulerMaruyamaStep))
+plt.plot(dt_max*factors, StrongError(factors, X0, itof, itog, itodgdx, w_max, MilsteinStep))
 
 
 
