@@ -58,14 +58,12 @@ def error_pendulum_fast(x0, v0, T, fv, N, Scheme, M=2000, ref_factor=5, seed=0):
     return float(np.mean(np.sqrt(dx_strong*dx_strong + dv_strong*dv_strong))), float(np.sqrt(dx_weak*dx_weak + dv_weak*dv_weak))
 
 
-def CreatePlot(scheme,fv,T,fd):
+def CreatePlot(scheme,fv,T,fd, M, ref_factor,points):
     x0, v0 = 1.0, 0.0
-    M = 2000
-    ref_factor = 4
     seed = 500
 
     Ns = np.unique(
-        np.round(2**np.linspace(10, 15, 50)).astype(int)
+        np.round(2**np.linspace(10, 15, points)).astype(int)
     )  
     dts = T / Ns
     from joblib import Parallel, delayed
@@ -108,6 +106,26 @@ def CreatePlot(scheme,fv,T,fd):
    
 
 if __name__ == "__main__":
-    CreatePlot(EulerMaruyamaStep,itofv,1.0,"Plot1.png")
-    CreatePlot(EulerMaruyamaStep,stratfv,1.0,"Plot2.png")
+    # CreatePlot(EulerMaruyamaStep,itofv,1.0,"Plot1.png", 1000, 5,50)
+    # a=0.0
+    # CreatePlot(EulerMaruyamaStep,itofv,1.0,"Plota0.png", 100, 5,20)
+    # a=0.6
+    # CreatePlot(EulerMaruyamaStep,itofv,1.0,"Plota6.png", 100, 5,20)
+    # a= 0.3
+    # b= 0.0
+    # CreatePlot(EulerMaruyamaStep,itofv,1.0,"Plotb0.png", 100, 5,20)
+    # b= 1.2
+    # CreatePlot(EulerMaruyamaStep,itofv,1.0,"Plotb12.png", 100, 5,20)
+    # b = 0.6
+    # c = 0.0
+    # CreatePlot(EulerMaruyamaStep,itofv,1.0,"Plotc0.png", 100, 5,20)
+    # c = 0.6
+    # CreatePlot(EulerMaruyamaStep,itofv,1.0,"Plotc6.png", 100, 5,20)
+
+
+
+    # c = 0.3
+    CreatePlot(EulerMaruyamaStep,stratfv,1.0,"Plotstrato.png", 1000, 5,50)
+    # CreatePlot(MilsteinStep,itofv,1.0,"Plotstrato.png", 1000, 5,50)
+    # CreatePlot(EulerMaruyamaStep,stratfv,1.0,"Plot2.png")
 
