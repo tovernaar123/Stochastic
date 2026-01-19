@@ -18,13 +18,13 @@ def gv(x, v, sx):
 def EulerMaruyamaStep(x, v, fv, dt, dw):
     sx = np.sin(x)
 
-    return x + vr*dt, v + fv(x, v, sx)*dt + gv(x, v, sx)*dw
+    return x + v*dt, v + fv(x, v, sx)*dt + gv(x, v, sx)*dw
 
 def MilsteinStep(x, v, fv, dt, dw):
     sx = np.sin(x)
     g = gv(x, v, sx)
 
-    return x + vr*dt, v + fv(x, v, sx)*dt + g*dw - 0.5*a*b*g*(dw*dw - dt)
+    return x + v*dt, v + fv(x, v, sx)*dt + g*dw - 0.5*a*b*g*(dw*dw - dt)
     
 
 def strong_error_pendulum_fast(x0, v0, T, fv, N, Scheme, M=2000, ref_factor=5, seed=0):
@@ -60,7 +60,7 @@ def convergence_plot_strong():
     T = 2.0
     a, b, c = 0.3, 0.6, 0.3
 
-    M = 100
+    M = 200
     ref_factor = 7
     seed = 123
 
@@ -73,8 +73,8 @@ def convergence_plot_strong():
 
     def run_one(N, dt, idx):
         e = strong_error_pendulum_fast(
-            x0, v0, T, a, b, c,
-            N, M=M, ref_factor=ref_factor, seed=seed + idx
+            x0, v0, T, stratfv,
+            N,EulerMaruyamaStep, M=M, ref_factor=ref_factor, seed=seed + idx
         )
         print(f"N={N:6d}, dt={dt:.3e}, strong_RMS={e:.3e}")
         return e
