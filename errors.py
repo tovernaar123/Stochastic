@@ -2,14 +2,32 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-def angle_diff(x1, x2):
-    d = x1 - x2
-    return (d + np.pi) % (2*np.pi) - np.pi
+a = 0.3
+b = 0.6
+c = 0.3
 
-def strong_error_pendulum_fast(
-    x0, v0, T, a, b, c,
-    N, M=2000, ref_factor=5, seed=0
-):
+def itofv(x, v, sx):
+    return -b*v - sx + c*np.sin(2*x)
+
+def stratfv(x, v, sx):
+    return itofv(x, v, sx) + 0.5*a*a*b*(b*v + sx)
+
+def gv(x, v, sx):
+    return -a*(b*v + sx)
+
+def EulerMaruyamaStep(x, v, fv, dt, dw):
+    sx = np.sin(x)
+
+    return x + vr*dt, v + fv(x, v, sx)*dt + gv(x, v, sx)*dw
+
+def MilsteinStep(x, v, fv, dt, dw):
+    sx = np.sin(x)
+    g = gv(x, v, sx)
+
+    return x + vr*dt, v + fv(x, v, sx)*dt + g*dw - 0.5*a*b*g*(dw*dw - dt)
+    
+
+def strong_error_pendulum_fast(x0, v0, T, fv, N, Scheme, M=2000, ref_factor=5, seed=0):
     rng = np.random.default_rng(seed)
 
     k = 2**ref_factor
@@ -29,27 +47,11 @@ def strong_error_pendulum_fast(
         for j in range(k):
             dWr = dW_block[:, j]
 
-            sx = np.sin(xr)
-            sin2x = np.sin(2*xr)
+            xr, vr = Scheme(xr, vr, fv, dt_ref, dWr) 
+        
+        xc, vc = Scheme(xc, vc, fv, dt, dWc)
 
-            dx = vr
-            dv = -b*vr - sx + c*sin2x
-            gv = -a*(b*vr + sx)
-
-            xr = xr + dx * dt_ref
-            vr = vr + dv * dt_ref + gv * dWr
-        sx = np.sin(xc)
-        cx = np.cos(xc)
-        sin2x = 2.0 * sx * cx
-
-        dx = vc
-        dv = -b*vc - sx + c*sin2x
-        gv = -a*(b*vc + sx)
-
-        xc = xc + dx * dt
-        vc = vc + dv * dt + gv * dWc
-
-    dx = angle_diff(xc, xr)
+    dx = xc - xr
     dv = vc - vr
     return float(np.mean(np.sqrt(dx*dx + dv*dv)))
 
