@@ -27,7 +27,7 @@ def MilsteinStep(x, v, fv, dt, dw):
     return x + v*dt, v + fv(x, v, sx)*dt + g*dw - 0.5*a*b*g*(dw*dw - dt)
     
 
-def strong_error_pendulum_fast(x0, v0, T, fv, N, Scheme, M=2000, ref_factor=5, seed=0):
+def error_pendulum_fast(x0, v0, T, fv, N, Scheme, M=2000, ref_factor=5, seed=0):
     rng = np.random.default_rng(seed)
 
     k = 2**ref_factor
@@ -51,9 +51,11 @@ def strong_error_pendulum_fast(x0, v0, T, fv, N, Scheme, M=2000, ref_factor=5, s
         
         xc, vc = Scheme(xc, vc, fv, dt, dWc)
 
-    dx = xc - xr
-    dv = vc - vr
-    return float(np.mean(np.sqrt(dx*dx + dv*dv)))
+    dx_strong = xc - xr
+    dv_strong = vc - vr
+    dx_weak = np.mean(xc) - np.mean(xr)
+    dv_weak = np.mean(vc) - np.mean(vr)
+    return float(np.sqrt(dx_strong*dx_strong + dv_strong*dv_strong)), float(np.mean(np.sqrt(dx_weak*dx_weak + dv_weak*dv_weak)))
 
 def convergence_plot_strong():
     x0, v0 = 1.0, 0.0
