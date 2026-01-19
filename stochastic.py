@@ -2,13 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 rng = np.random.default_rng()
-dt_max = .0005 
+T = 5.0
+n = 2**14 + 1
+dt_max = T/(n-1)
 sqrtdt_max = np.sqrt(dt_max)
-T = 1.  # Total time.
-n = int(T / dt_max)  # Number of time steps.
-w_max = rng.normal(0.0, sqrtdt_max, n) 
+dwmax = rng.normal(0.0, sqrtdt_max,  n-1)
+w_max = np.zeros(n)
+w_max[1:] = np.cumsum(dwmax)
      
-a = 0.3
+a = 0.8
 b = 0.6
 c = 0.3
 
@@ -29,7 +31,6 @@ def itodgdx(X, t):
     y = X[1]
     return np.array([[0, 0], [-a*np.cos(x), -a*b]])
 
-
 def EulerMaruyamaStep(X, f, g, dgdx, t, dt, dWt):
     return X + f(X, t)*dt + g(X, t)*dWt
 
@@ -39,111 +40,55 @@ def MilsteinStep(X, f, g, dgdx, t, dt, dWt):
     return X + f(X, t)*dt + gvar*dWt + 0.5*dval*(dWt*dWt - dt)
 
 def Schemer(factor, X, f, g, dgdx, wmax, Scheme):
+    X = np.array(X, dtype=float)
     w = wmax[::factor]
-    dw = w[1:] - w[:-1]
-    t = np.arange(0, 1, dt_max*factor)[1:]
-    xlist = []
-
-    for i in range(len(t)):
-        xlist.append(Scheme(X, f, g, dgdx, t[i], dt_max*factor, dw[i]))
-
-    xlist = np.array(xlist)
-    #plt.plot(t, xlist[:, 1])
+    dw = np.diff(w)
+    dt = dt_max * factor
+    t = dt * np.arange(1, len(dw) + 1)
+    xlist = np.empty((len(dw), 2), dtype=float)
+    for i in range(len(dw)):
+        X = Scheme(X, f, g, dgdx, t[i], dt, dw[i])
+        xlist[i] = X
     return t, xlist
 
-def StrongError(factorlist, X, f, g, dgdx, wmax, Scheme):
-    tmax, schememax = Schemer(1, X, f, g, dgdx, wmax, Scheme)
+def StrongError(factorlist, X, f, g, dgdx, Scheme, trials):
+    dwmax = rng.normal(0.0, sqrtdt_max, (trials, n-1))
+    wmax = np.zeros((trials, n))
+    wmax[:, 1:] = np.cumsum(dwmax, axis=1)
     errorlist = []
     for factor in factorlist:
-        t, scheme = Schemer(factor, X, f, g, dgdx, wmax, Scheme)
-        errorlist.append(np.average(np.abs(schememax[factor-1::factor, 1] - scheme[:, 1])))
-        
+        errs = []
+        for i in range(trials):
+            _, fine = Schemer(1, X, f, g, dgdx, wmax[i], Scheme)
+            _, coarse = Schemer(factor, X, f, g, dgdx, wmax[i], Scheme)
+            ref = fine[factor-1::factor, 1]
+            errs.append(abs(ref[-1] - coarse[-1, 1]))
+        errorlist.append(np.mean(errs))
     return np.array(errorlist)
 
 def WeakError(factorlist, X, f, g, dgdx, Scheme, trials):
-    wmax = rng.normal(0.0, sqrtdt_max, (trials, n))
-    schememax_avg = []
+    dwmax = rng.normal(0.0, sqrtdt_max, (trials, n-1))
+    wmax = np.zeros((trials, n))
+    wmax[:, 1:] = np.cumsum(dwmax, axis=1)
+    fine_vals = []
     for i in range(trials):
-        tmax, schememax = Schemer(1, X, f, g, dgdx, wmax[i], Scheme)
-        schememax_avg.append(schememax)
-
-    schememax_avg = np.average(schememax_avg, 0)
-
+        _, fine = Schemer(1, X, f, g, dgdx, wmax[i], Scheme)
+        fine_vals.append(fine[-1, 1])
+    fine_mean = np.mean(fine_vals)
     errorlist = []
     for factor in factorlist:
-        scheme_avg = []
+        coarse_vals = []
         for i in range(trials):
-            t, scheme = Schemer(factor, X, f, g, dgdx, wmax[i], Scheme)
-            scheme_avg.append(scheme)
-
-        scheme_avg = np.average(scheme_avg, 0)
-        errorlist.append(np.average(np.abs(schememax_avg[factor-1::factor, 1] - scheme_avg[:, 1])))
-            
-        
+            _, coarse = Schemer(factor, X, f, g, dgdx, wmax[i], Scheme)
+            coarse_vals.append(coarse[-1, 1])
+        errorlist.append(abs(fine_mean - np.mean(coarse_vals)))
     return np.array(errorlist)
 
-
-
-    
-
-
-
-#for i in range(1, 20):
-#    Schemer(i*5, X0, itof, itog, itodgdx, w_max, MilsteinStep)
-
-factors = np.array(range(200, 2000))
+factors = np.array([2,4,8,16,32,64,128])
+trials = 100
 plt.figure()
-plt.plot(dt_max*factors, StrongError(factors, X0, itof, itog, itodgdx, w_max, EulerMaruyamaStep))
-plt.plot(dt_max*factors, StrongError(factors, X0, itof, itog, itodgdx, w_max, MilsteinStep))
-
-trials = 500
-plt.figure()
-plt.plot(dt_max*factors,  WeakError(factors, X0, itof, itog, itodgdx, EulerMaruyamaStep, trials))
-plt.plot(dt_max*factors,  WeakError(factors, X0, itof, itog, itodgdx, MilsteinStep, trials))
-
-
-
-
-
-
-
-#Euler-Maruyama
-#for i in range(n - 1):
-#    w[i + 1] = w[i]+ sqrtdt * np.random.randn()
-#    x[i + 1] = x[i] + y[i]*dt
-#    y[i + 1] = y[i] + (-b*y[i] - np.sin(x[i]) + c*np.sin(2*x[i]))*dt + (-a*b*y[i] - a*np.sin(x[i]))*(w[i+1] - w[i])
-    
-#Milstein
-#for i in range(n - 1):
-#    w[i + 1] = w[i]+ sqrtdt * np.random.randn()
-#    x[i + 1] = x[i] + y[i]*dt
-#    y[i + 1] = y[i] + (-b*y[i] - np.sin(x[i]) + c*np.sin(2*x[i]))*dt + (-a*b*y[i] - a*np.sin(x[i]))*(w[i+1] - w[i]) - (-a*b*y[i] - a*np.sin(x[i]))*a*b*((w[i + 1] - w[i])**2 - dt) 
-#    
-#
-#plt.plot(t, w_max)
-#plt.plot(t, x)
-#plt.plot(t, y)
-
-#fig, ax = plt.subplots(1, 1, figsize=(8, 4))
-#ax.plot(tc, xc, lw=2)
-#ax.plot(tc,gc,'ro',markersize=1)
-
-#
-#ntrials = 10000
-#X = np.zeros(ntrials)
-#     
-#bins = np.linspace(-2., 14., 100)
-#fig, ax = plt.subplots(1, 1, figsize=(8, 4))
-#for i in range(n):
-#    # We update the process independently for
-#    # all trials
-#    X +=  b*b*dt*X*0.5+sqrtdt * np.random.randn(ntrials)
-#    # We display the histogram for a few points in
-#    # time
-#    if i in (5, 50, 900):
-#        hist, _ = np.histogram(X, bins=bins)
-#        ax.plot((bins[1:] + bins[:-1]) / 2, hist,
-#                {5: '-', 50: '.', 900: '-.', }[i],
-#                label=f"t={i * dt:.2f}")
-
+plt.xscale('log')
+plt.yscale('log')
+plt.plot(dt_max*factors, StrongError(factors, X0, itof, itog, itodgdx, EulerMaruyamaStep, trials))
+plt.plot(dt_max*factors, WeakError(factors, X0, itof, itog, itodgdx, EulerMaruyamaStep, trials))
 plt.show()
