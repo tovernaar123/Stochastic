@@ -42,13 +42,13 @@ def Stratonovich(x0, v0, T, N, a, b, c, seed=np.random.randint(0,2**30,1)):
 
 
 if __name__ == "__main__":
-    a = 0.8
+    a = 0.3
     b = 0.6
     c = 0.3
 
-    x0, v0 = 1.0, 0.0
-    T = 25.
-    N = 50000*2
+    x0, v0 = 0.5*np.pi, 0.0
+    T = 2
+    N = 50000*50
     space = np.linspace(0,T,num=N+1)
 
     
@@ -60,9 +60,11 @@ if __name__ == "__main__":
     print(space.shape)
     plt.plot(space,ito_path[:,0],label="Ito")
     plt.plot(space,strat_path[:,0],label="strat")
+    plt.title(r"Comparing IT$\^{O}$ and Stratonovich")
+    plt.grid(True, which="both", alpha=0.3)
     plt.ylabel("angle")
     plt.xlabel("time")
     plt.legend()
     # plt.plot(space,strat_path[:,0])
-    plt.show()
+    plt.savefig('Strato.png')
 
